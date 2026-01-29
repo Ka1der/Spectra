@@ -11,7 +11,14 @@ import SwiftUI
 struct SpectraApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            PaletteView(colors: [
+                .blue,
+                .cyan,
+                .mint,
+                .green,
+                .yellow
+            ]
+            )
         }
     }
 }
