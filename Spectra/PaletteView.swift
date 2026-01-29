@@ -57,6 +57,21 @@ struct PaletteView: View {
     private var complementaryHex: String {
         UIColor(complementaryColor).toHex()
     }
+    
+    private var squareHues: [Double] {
+        [
+            hue,
+            (hue + 0.25).truncatingRemainder(dividingBy: 1),
+            (hue + 0.50).truncatingRemainder(dividingBy: 1),
+            (hue + 0.75).truncatingRemainder(dividingBy: 1)
+        ]
+    }
+
+    private var squareColors: [Color] {
+        squareHues.map {
+            Color(hue: $0, saturation: saturation, brightness: 1)
+        }
+    }
 
     // MARK: - Harmony
 
@@ -64,6 +79,7 @@ struct PaletteView: View {
         case free = "Свободный выбор"
         case complementary = "Complementary"
         case triad = "Triad"
+        case square = "Square"
     }
 
     // MARK: - UI
@@ -124,18 +140,39 @@ struct PaletteView: View {
 
                     // Complementary marker
                     if harmony == .complementary {
-                        marker(
-                            color: complementaryColor,
-                            hue: (hue + 0.5).truncatingRemainder(dividingBy: 1),
+                        let hues = [
+                            hue,
+                            (hue + 0.5).truncatingRemainder(dividingBy: 1)
+                        ]
+
+                        polygon(
+                            hues: hues,
                             saturation: saturation,
                             radius: radius,
-                            center: center,
-                            size: 16
+                            center: center
                         )
+
+                        ForEach(hues, id: \.self) { h in
+                            marker(
+                                color: Color(hue: h, saturation: saturation, brightness: 1),
+                                hue: h,
+                                saturation: saturation,
+                                radius: radius,
+                                center: center,
+                                size: h == hue ? 18 : 16
+                            )
+                        }
                     }
                     
                     // Triad marker
                     if harmony == .triad {
+                        polygon(
+                            hues: triadHues,
+                            saturation: saturation,
+                            radius: radius,
+                            center: center
+                        )
+
                         ForEach(triadHues, id: \.self) { h in
                             marker(
                                 color: Color(hue: h, saturation: saturation, brightness: 1),
@@ -143,11 +180,31 @@ struct PaletteView: View {
                                 saturation: saturation,
                                 radius: radius,
                                 center: center,
-                                size: 16
+                                size: h == hue ? 18 : 16
                             )
                         }
                     }
 
+                    // Square marker
+                    if harmony == .square {
+                        polygon(
+                            hues: squareHues,
+                            saturation: saturation,
+                            radius: radius,
+                            center: center
+                        )
+
+                        ForEach(squareHues, id: \.self) { h in
+                            marker(
+                                color: Color(hue: h, saturation: saturation, brightness: 1),
+                                hue: h,
+                                saturation: saturation,
+                                radius: radius,
+                                center: center,
+                                size: h == hue ? 18 : 16
+                            )
+                        }
+                    }
                 }
                 .contentShape(Circle())
                 .gesture(
@@ -189,6 +246,14 @@ struct PaletteView: View {
                             hex: UIColor(color).toHex()
                         )
                     }
+
+                case .square:
+                    ForEach(squareColors, id: \.self) { color in
+                        preview(
+                            color: color,
+                            hex: UIColor(color).toHex()
+                        )
+                    }
                 }
             }
             .padding()
@@ -217,6 +282,40 @@ struct PaletteView: View {
                     center: center
                 )
             )
+    }
+    
+    private func polygon(
+        hues: [Double],
+        saturation: Double,
+        radius: CGFloat,
+        center: CGPoint
+    ) -> some View {
+        Path { path in
+            guard let first = hues.first else { return }
+
+            let firstPoint = point(
+                hue: first,
+                saturation: saturation,
+                radius: radius,
+                center: center
+            )
+
+            path.move(to: firstPoint)
+
+            for h in hues.dropFirst() {
+                path.addLine(
+                    to: point(
+                        hue: h,
+                        saturation: saturation,
+                        radius: radius,
+                        center: center
+                    )
+                )
+            }
+
+            path.closeSubpath()
+        }
+        .stroke(.white.opacity(0.6), lineWidth: 1)
     }
 
     private func preview(color: Color, hex: String) -> some View {
