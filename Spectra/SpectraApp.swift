@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+internal import CoreData
 
 @main
 struct SpectraApp: App {
@@ -20,5 +21,7 @@ struct SpectraApp: App {
             ]
             )
         }
+        .environment(\.managedObjectContext,
+                     PersistenceController.shared.container.viewContext)
     }
 }
