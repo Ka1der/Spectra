@@ -39,11 +39,17 @@ struct PaletteView: View {
     }
 
     var activeColors: [Color] {
+        let targetCount = max(1, harmonyColors.count)
+
         if !importedColors.isEmpty {
-            return importedColors
+            return normalizedPaletteColors(from: importedColors, targetCount: targetCount)
         }
 
-        return loadedPaletteColors.isEmpty ? generatedColors : loadedPaletteColors
+        if !loadedPaletteColors.isEmpty {
+            return normalizedPaletteColors(from: loadedPaletteColors, targetCount: targetCount)
+        }
+
+        return normalizedPaletteColors(from: generatedColors, targetCount: targetCount)
     }
 
     var harmonyColors: [HarmonyColor] {
@@ -304,6 +310,28 @@ struct PaletteView: View {
     func clearLoadedPaletteSelection() {
         loadedPalette = nil
         loadedPaletteColors = []
+    }
+
+    private func normalizedPaletteColors(from source: [Color], targetCount: Int) -> [Color] {
+        guard !source.isEmpty else { return [] }
+        guard source.count != targetCount else { return source }
+
+        if source.count > targetCount {
+            return Array(source.prefix(targetCount))
+        }
+
+        let fallback = generatedColors
+        guard !fallback.isEmpty else {
+            return source + Array(repeating: source.last ?? .clear, count: max(0, targetCount - source.count))
+        }
+
+        var expanded = source
+        var fallbackIndex = 0
+        while expanded.count < targetCount {
+            expanded.append(fallback[fallbackIndex % fallback.count])
+            fallbackIndex += 1
+        }
+        return expanded
     }
 }
 
