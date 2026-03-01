@@ -10,6 +10,7 @@ import SwiftUI
 enum AppTab: Hashable {
     case generator
     case saved
+    case camera
 }
 
 struct RootTabView: View {
@@ -34,6 +35,15 @@ struct RootTabView: View {
                 Label("Сохраненные", systemImage: "square.stack")
             }
             .tag(AppTab.saved)
+
+            NavigationStack {
+                CameraView()
+                    .navigationTitle("Камера")
+            }
+            .tabItem {
+                Label("Камера", systemImage: "camera")
+            }
+            .tag(AppTab.camera)
         }
     }
 }

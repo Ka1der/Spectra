@@ -84,15 +84,14 @@ extension PaletteView {
                 let dx = value.location.x - center.x
                 let dy = value.location.y - center.y
                 let distance = sqrt(dx * dx + dy * dy)
-
-                guard distance <= radius else { return }
+                let clampedDistance = min(distance, radius)
 
                 let angle = atan2(dy, dx)
                 hue = angle < 0
                     ? (angle + 2 * Double.pi) / (2 * Double.pi)
                     : angle / (2 * Double.pi)
 
-                saturation = min(distance / radius, 1)
+                saturation = min(clampedDistance / radius, 1)
             }
     }
 }
