@@ -38,7 +38,6 @@ struct RootTabView: View {
 
             NavigationStack {
                 CameraView()
-                    .navigationTitle("Камера")
             }
             .tabItem {
                 Label("Камера", systemImage: "camera")
