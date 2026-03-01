@@ -32,7 +32,7 @@ struct SavePaletteView: View {
             
             if let error = viewModel.validationError {
                 Text(error)
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                     .font(.caption)
             }
 
@@ -48,6 +48,7 @@ struct SavePaletteView: View {
             Spacer()
         }
         .padding()
+        .background(AppTheme.pageBackground.ignoresSafeArea())
         .navigationTitle("Сохранение")
     }
 }

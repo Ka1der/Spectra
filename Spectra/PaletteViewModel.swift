@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
-internal import CoreData
 import Combine
+internal import CoreData
 
+@MainActor
 final class PaletteViewModel: ObservableObject {
 
     @Published var colors: [Color] = []

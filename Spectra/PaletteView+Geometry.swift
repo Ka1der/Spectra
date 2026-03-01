@@ -24,7 +24,10 @@ extension PaletteView {
                     brightness: color.brightness
                 )
             )
-            .overlay(Circle().stroke(.black, lineWidth: 2))
+            .overlay(
+                Circle()
+                    .stroke(AppTheme.markerStroke(for: colorScheme), lineWidth: 2)
+            )
             .frame(width: isMain ? 18 : 16, height: isMain ? 18 : 16)
             .position(
                 PaletteGeometry.point(
@@ -66,7 +69,7 @@ extension PaletteView {
 
             path.closeSubpath()
         }
-        .stroke(.black.opacity(0.6), lineWidth: 1)
+        .stroke(.primary.opacity(0.65), lineWidth: 1)
     }
 
     func dragGesture(
@@ -75,7 +78,8 @@ extension PaletteView {
     ) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                loadedPalette = nil
+                importedColors = []
+                clearLoadedPaletteSelection()
 
                 let dx = value.location.x - center.x
                 let dy = value.location.y - center.y

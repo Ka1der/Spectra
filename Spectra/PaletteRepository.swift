@@ -15,33 +15,35 @@ final class PaletteRepository {
         self.context = context
     }
 
-    func fetch() -> [Palette] {
+    func fetch() throws -> [Palette] {
         let request = PaletteEntity.fetchRequest()
         request.sortDescriptors = [
             NSSortDescriptor(key: "createdAt", ascending: false)
         ]
+        request.fetchBatchSize = 30
 
-        let result = (try? context.fetch(request)) ?? []
+        let result = try context.fetch(request)
         return result.map { $0.toModel() }
     }
 
-    func save(name: String, colors: [String]) {
+    func save(name: String, colors: [String]) throws {
         let palette = PaletteEntity(context: context)
         palette.id = UUID()
         palette.name = name
         palette.colors = colors as NSObject
         palette.createdAt = .now
 
-        try? context.save()
+        try context.save()
     }
 
-    func delete(_ palette: Palette) {
+    func delete(_ palette: Palette) throws {
         let request = PaletteEntity.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", palette.id as CVarArg)
+        request.fetchLimit = 1
 
-        if let entity = try? context.fetch(request).first {
+        if let entity = try context.fetch(request).first {
             context.delete(entity)
-            try? context.save()
+            try context.save()
         }
     }
 }

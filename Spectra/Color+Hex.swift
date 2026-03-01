@@ -9,7 +9,7 @@ import UIKit
 import SwiftUI
 
 extension UIColor {
-    func toHex() -> String {
+    nonisolated func toHex() -> String {
         var r: CGFloat = 0
         var g: CGFloat = 0
         var b: CGFloat = 0
@@ -25,7 +25,7 @@ extension UIColor {
         )
     }
 
-    convenience init?(hex: String) {
+    nonisolated convenience init?(hex: String) {
         let normalized = hex
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "#", with: "")
@@ -46,7 +46,7 @@ extension UIColor {
 }
 
 extension Color {
-    init?(hex: String) {
+    nonisolated init?(hex: String) {
         guard let uiColor = UIColor(hex: hex) else { return nil }
         self.init(uiColor)
     }

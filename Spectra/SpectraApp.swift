@@ -10,16 +10,12 @@ internal import CoreData
 
 @main
 struct SpectraApp: App {
+    @StateObject private var loadStore = PaletteLoadStore()
+
     var body: some Scene {
         WindowGroup {
-            PaletteView(colors: [
-                .blue,
-                .cyan,
-                .mint,
-                .green,
-                .yellow
-            ]
-            )
+            RootTabView()
+                .environmentObject(loadStore)
         }
         .environment(\.managedObjectContext,
                      PersistenceController.shared.container.viewContext)

@@ -7,8 +7,10 @@
 
 import SwiftUI
 import Combine
+import os
 internal import CoreData
 
+@MainActor
 final class SavePaletteViewModel: ObservableObject {
     
     @Published var name: String = ""
@@ -16,6 +18,7 @@ final class SavePaletteViewModel: ObservableObject {
     
     private let repository: PaletteRepository
     private let context: NSManagedObjectContext
+    private let logger = Logger(subsystem: "Kaider.Spectra", category: "SavePalette")
     
     init(context: NSManagedObjectContext) {
         self.context = context
@@ -36,12 +39,17 @@ final class SavePaletteViewModel: ObservableObject {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let hex = colors.map { UIColor($0).toHex() }
         
-        repository.save(
-            name: trimmed,
-            colors: hex
-        )
-        
-        return true
+        do {
+            try repository.save(
+                name: trimmed,
+                colors: hex
+            )
+            return true
+        } catch {
+            logger.error("Save palette failed: \(error.localizedDescription, privacy: .public)")
+            validationError = "Ошибка сохранения. Попробуйте еще раз"
+            return false
+        }
     }
     
     enum PaletteNameValidationResult: Equatable {
