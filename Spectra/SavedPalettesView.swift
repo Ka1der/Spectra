@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
-import os
 internal import CoreData
 
 struct SavedPalettesView: View {
     @Binding var selectedTab: AppTab
+    @StateObject private var viewModel = SavedPalettesViewModel()
     @EnvironmentObject private var loadStore: PaletteLoadStore
     @Environment(\.managedObjectContext) private var context
     @FetchRequest(
@@ -18,15 +18,10 @@ struct SavedPalettesView: View {
         animation: .default
     )
     private var savedPalettes: FetchedResults<PaletteEntity>
-    @State private var presentations: [SavedPalettePresentation] = []
-    @State private var shareItem: SharedFileItem?
-    @State private var exportError: String?
-    @State private var lastSharedFileURL: URL?
-    private let logger = Logger(subsystem: "Kaider.Spectra", category: "SavedPalettes")
 
     var body: some View {
         Group {
-            if presentations.isEmpty {
+            if viewModel.presentations.isEmpty {
                 ContentUnavailableView(
                     "Нет сохраненных палитр",
                     systemImage: "square.stack",
@@ -35,7 +30,7 @@ struct SavedPalettesView: View {
             } else {
                 ScrollView(.vertical, showsIndicators: true) {
                     LazyVStack(spacing: 10) {
-                        ForEach(presentations) { presentation in
+                        ForEach(viewModel.presentations) { presentation in
                             paletteCard(presentation)
                         }
                     }
@@ -44,7 +39,7 @@ struct SavedPalettesView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if let exportError {
+            if let exportError = viewModel.exportError {
                 Text(exportError)
                     .font(.caption)
                     .foregroundStyle(.red)
@@ -55,12 +50,15 @@ struct SavedPalettesView: View {
         }
         .padding(.horizontal)
         .background(AppTheme.pageBackground.ignoresSafeArea())
-        .sheet(item: $shareItem, onDismiss: clearSharedFile) { item in
+        .sheet(item: $viewModel.shareItem, onDismiss: viewModel.clearSharedFile) { item in
             ActivityView(activityItems: [item.url])
         }
-        .onAppear(perform: rebuildPresentations)
+        .onAppear {
+            viewModel.configure(context: context, loadStore: loadStore)
+            viewModel.rebuildPresentations(from: savedPalettes)
+        }
         .onChange(of: savedPalettes.count) { _, _ in
-            rebuildPresentations()
+            viewModel.rebuildPresentations(from: savedPalettes)
         }
         .onReceive(
             NotificationCenter.default.publisher(
@@ -68,7 +66,12 @@ struct SavedPalettesView: View {
                 object: context
             )
         ) { _ in
-            rebuildPresentations()
+            viewModel.rebuildPresentations(from: savedPalettes)
+        }
+        .onChange(of: viewModel.tabToSelect) { _, tab in
+            guard let tab else { return }
+            selectedTab = tab
+            viewModel.consumeTabSelection()
         }
     }
 
@@ -99,8 +102,7 @@ struct SavedPalettesView: View {
 
             VStack(spacing: 10) {
                 Button {
-                    loadStore.paletteToLoad = presentation.palette
-                    selectedTab = .generator
+                    viewModel.load(presentation)
                 } label: {
                     Image(systemName: "arrow.up.circle")
                         .font(.headline)
@@ -109,7 +111,7 @@ struct SavedPalettesView: View {
                 .disabled(presentation.swatches.isEmpty)
 
                 Button {
-                    exportPalette(presentation.palette, scheme: presentation.scheme)
+                    viewModel.export(presentation)
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.headline)
@@ -118,7 +120,7 @@ struct SavedPalettesView: View {
                 .disabled(presentation.swatches.isEmpty)
 
                 Button {
-                    deletePalette(presentation.palette)
+                    viewModel.delete(presentation)
                 } label: {
                     Image(systemName: "trash")
                         .font(.headline)
@@ -132,70 +134,4 @@ struct SavedPalettesView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
-
-    private func deletePalette(_ palette: Palette) {
-        let request = PaletteEntity.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", palette.id as CVarArg)
-        request.fetchLimit = 1
-
-        do {
-            guard let entity = try context.fetch(request).first else {
-                return
-            }
-
-            context.delete(entity)
-            try context.save()
-        } catch {
-            logger.error("Delete palette failed: \(error.localizedDescription, privacy: .public)")
-            exportError = "Не удалось удалить палитру"
-        }
-    }
-
-    private func exportPalette(_ palette: Palette, scheme: ColorHarmony) {
-        do {
-            let url = try PaletteExportService.exportFileURL(for: palette, scheme: scheme)
-            exportError = nil
-            lastSharedFileURL = url
-            shareItem = SharedFileItem(url: url)
-        } catch {
-            exportError = "Не удалось экспортировать палитру"
-        }
-    }
-
-    private func clearSharedFile() {
-        guard let url = lastSharedFileURL else { return }
-        do {
-            try FileManager.default.removeItem(at: url)
-        } catch {
-            logger.error("Temp export cleanup failed: \(error.localizedDescription, privacy: .public)")
-        }
-        lastSharedFileURL = nil
-        shareItem = nil
-    }
-
-    private func rebuildPresentations() {
-        presentations = savedPalettes.map { entity in
-            let palette = entity.toModel()
-            let uiColors = palette.colors.compactMap(UIColor.init(hex:))
-            let swatches = uiColors.map(Color.init(uiColor:))
-            let scheme = HarmonyDetector.detectClosestHarmony(
-                from: uiColors,
-                fallbackHue: 0
-            ).harmony
-
-            return SavedPalettePresentation(
-                palette: palette,
-                swatches: swatches,
-                scheme: scheme
-            )
-        }
-    }
-}
-
-private struct SavedPalettePresentation: Identifiable {
-    let palette: Palette
-    let swatches: [Color]
-    let scheme: ColorHarmony
-
-    var id: UUID { palette.id }
 }
