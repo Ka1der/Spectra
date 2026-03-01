@@ -75,6 +75,8 @@ extension PaletteView {
     ) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
+                loadedPalette = nil
+
                 let dx = value.location.x - center.x
                 let dy = value.location.y - center.y
                 let distance = sqrt(dx * dx + dy * dy)
@@ -90,4 +92,3 @@ extension PaletteView {
             }
     }
 }
-

@@ -7,7 +7,9 @@
 
 import SwiftUI
 import UIKit
+internal import CoreData
 
+@MainActor
 struct PaletteView: View {
     let colors: [Color]
 
@@ -16,15 +18,29 @@ struct PaletteView: View {
     @State var harmony: ColorHarmony = .free
     @State var showHarmonyPicker = false
     @State private var showSave = false
+    @State var loadedPalette: Palette?
     @Environment(\.managedObjectContext) private var context
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(key: "createdAt", ascending: false)],
+        animation: .default
+    )
+    private var savedPalettes: FetchedResults<PaletteEntity>
 
-    // Computed colors for the current harmony selection to be saved
-    private var currentColors: [Color] {
-        // Map HarmonyColor to SwiftUI Color. Assuming HarmonyColor exposes hue and saturation in 0...1 space,
-        // and full brightness/value for display.
+    var generatedColors: [Color] {
         harmonyColors.map { hc in
-            Color(hue: hc.hue, saturation: hc.saturation, brightness: 1.0)
+            Color(hue: hc.hue, saturation: hc.saturation, brightness: hc.brightness)
         }
+    }
+
+    var activeColors: [Color] {
+        guard let loadedPalette else { return generatedColors }
+
+        let loaded = loadedPalette.colors.compactMap(Color.init(hex:))
+        return loaded.isEmpty ? generatedColors : loaded
+    }
+
+    var savedPaletteModels: [Palette] {
+        savedPalettes.map { $0.toModel() }
     }
 
     var harmonyColors: [HarmonyColor] {
@@ -79,6 +95,8 @@ struct PaletteView: View {
                 Label("Сохранить палитру", systemImage: "square.and.arrow.down")
             }
             .buttonStyle(.borderedProminent)
+
+            savedPalettesSection
         }
         .padding()
         .sheet(isPresented: $showSave) {
@@ -87,9 +105,45 @@ struct PaletteView: View {
                     viewModel: SavePaletteViewModel(
                         context: context
                     ),
-                    colors: currentColors
+                    colors: activeColors
                 )
             }
+        }
+    }
+
+    func loadPalette(_ palette: Palette) {
+        loadedPalette = palette
+
+        guard
+            let firstColor = palette.colors.compactMap(Color.init(hex:)).first
+        else {
+            return
+        }
+
+        var h: CGFloat = 0
+        var s: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+
+        UIColor(firstColor).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        hue = Double(h)
+        saturation = Double(s)
+    }
+
+    func deletePalette(_ palette: Palette) {
+        let request = PaletteEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", palette.id as CVarArg)
+        request.fetchLimit = 1
+
+        guard let entity = try? context.fetch(request).first else {
+            return
+        }
+
+        context.delete(entity)
+        try? context.save()
+
+        if loadedPalette?.id == palette.id {
+            loadedPalette = nil
         }
     }
 }

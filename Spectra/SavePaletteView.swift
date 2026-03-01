@@ -29,11 +29,18 @@ struct SavePaletteView: View {
             // Name input
             TextField("Название палитры", text: $viewModel.name)
                 .textFieldStyle(.roundedBorder)
+            
+            if let error = viewModel.validationError {
+                Text(error)
+                    .foregroundColor(.red)
+                    .font(.caption)
+            }
 
             // Save
             Button("Сохранить") {
-                viewModel.save(colors: colors)
-                dismiss()
+                if viewModel.save(colors: colors) {
+                    dismiss()
+                }
             }
             .buttonStyle(.borderedProminent)
             .disabled(colors.isEmpty)
